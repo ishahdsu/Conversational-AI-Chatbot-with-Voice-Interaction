@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .chat-container {
+            width: 500px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .chat-box {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            overflow-y: auto;
+        }
+        .chat-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            margin-top: 10px;
+        }
+        .chat-button {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h2>Chatbot</h2>
+        <div class="chat-box" id="chat-box"></div>
+        <input type="text" id="user-input" class="chat-input" placeholder="Type your message...">
+        <button onclick="sendMessage()" class="chat-button">Send</button>
+        <button onclick="recordMessage()" class="chat-button">Record</button>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const userInput = document.getElementById('user-input').value;
+            const chatBox = document.getElementById('chat-box');
+
+            if (userInput.trim() === '') {
+                alert('Please enter a message');
+                return;
+            }
+
+            const userMessageElement = document.createElement('p');
+            userMessageElement.textContent = 'You: ' + userInput;
+            chatBox.appendChild(userMessageElement);
+
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: userInput }),
+            });
+
+            const data = await response.json();
+            const botMessageElement = document.createElement('p');
+            botMessageElement.textContent = 'Bot: ' + data.response;
+            chatBox.appendChild(botMessageElement);
+
+            document.getElementById('user-input').value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Text-to-Speech
+            const utterance = new SpeechSynthesisUtterance(data.response);
+            speechSynthesis.speak(utterance);
+        }
+
+        function recordMessage() {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                console.log('Voice recognition started. Try speaking into the microphone.');
+            };
+
+            recognition.onspeechend = () => {
+                recognition.stop();
+            };
+
+            recognition.onresult = async (event) => {
+                const transcript = event.results[0][0].transcript;
+                const chatBox = document.getElementById('chat-box');
+
+                const userMessageElement = document.createElement('p');
+                userMessageElement.textContent = 'You: ' + transcript;
+                chatBox.appendChild(userMessageElement);
+
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: transcript }),
+                });
+
+                const data = await response.json();
+                const botMessageElement = document.createElement('p');
+                botMessageElement.textContent = 'Bot: ' + data.response;
+                chatBox.appendChild(botMessageElement);
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                // Text-to-Speech
+                const utterance = new SpeechSynthesisUtterance(data.response);
+                speechSynthesis.speak(utterance);
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error detected: ' + event.error);
+            };
+
+            recognition.start();
+        }
+    </script>
+</body>
+</html>
